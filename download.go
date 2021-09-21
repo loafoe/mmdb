@@ -24,6 +24,9 @@ func Download(filePath, licenseKey string, client ...*http.Client) (*http.Respon
 	if err != nil {
 		return resp, err
 	}
+	if resp.StatusCode != http.StatusOK {
+		return resp, fmt.Errorf("download returned statusCode: %d", resp.StatusCode)
+	}
 	defer resp.Body.Close()
 	uncompressedStream, err := gzip.NewReader(resp.Body)
 	if err != nil {
