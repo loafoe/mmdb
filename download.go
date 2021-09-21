@@ -14,7 +14,7 @@ const (
 	downloadUrl = "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=%s&suffix=tar.gz"
 )
 
-func Download(filePath, licenseKey string, client ...*http.Client) error {
+func Download(filePath, licenseKey string, client ...*http.Client) (*http.Response, error) {
 	c := http.DefaultClient
 	if len(client) > 0 {
 		c = client[0]
@@ -22,12 +22,12 @@ func Download(filePath, licenseKey string, client ...*http.Client) error {
 	downloadURL := fmt.Sprintf(downloadUrl, licenseKey)
 	resp, err := c.Get(downloadURL)
 	if err != nil {
-		return err
+		return resp, err
 	}
 	defer resp.Body.Close()
 	uncompressedStream, err := gzip.NewReader(resp.Body)
 	if err != nil {
-		return fmt.Errorf("gzip.NewReader: %w", err)
+		return resp, fmt.Errorf("gzip.NewReader: %w", err)
 	}
 	tarReader := tar.NewReader(uncompressedStream)
 	for {
@@ -36,7 +36,7 @@ func Download(filePath, licenseKey string, client ...*http.Client) error {
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("tarReader.Next: %w", err)
+			return resp, fmt.Errorf("tarReader.Next: %w", err)
 		}
 		switch header.Typeflag {
 		case tar.TypeDir:
@@ -47,10 +47,10 @@ func Download(filePath, licenseKey string, client ...*http.Client) error {
 			}
 			outFile, err := os.Create(filePath)
 			if err != nil {
-				return fmt.Errorf("os.Create: %w", err)
+				return resp, fmt.Errorf("os.Create: %w", err)
 			}
 			if _, err := io.Copy(outFile, tarReader); err != nil {
-				return fmt.Errorf("io.Copy: %w", err)
+				return resp, fmt.Errorf("io.Copy: %w", err)
 			}
 			_ = outFile.Close()
 		default:
@@ -58,8 +58,8 @@ func Download(filePath, licenseKey string, client ...*http.Client) error {
 				"ExtractTarGz: uknown type: %v in %s",
 				header.Typeflag,
 				header.Name)
-			return fmt.Errorf("header.Typeflag: %w", err)
+			return resp, fmt.Errorf("header.Typeflag: %w", err)
 		}
 	}
-	return nil
+	return resp, nil
 }
