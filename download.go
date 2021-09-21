@@ -14,10 +14,13 @@ const (
 	downloadUrl = "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=%s&suffix=tar.gz"
 )
 
-func Download(filePath, licenseKey string) error {
-
+func Download(filePath, licenseKey string, client ...*http.Client) error {
+	c := http.DefaultClient
+	if len(client) > 0 {
+		c = client[0]
+	}
 	downloadURL := fmt.Sprintf(downloadUrl, licenseKey)
-	resp, err := http.Get(downloadURL)
+	resp, err := c.Get(downloadURL)
 	if err != nil {
 		return err
 	}
@@ -49,7 +52,7 @@ func Download(filePath, licenseKey string) error {
 			if _, err := io.Copy(outFile, tarReader); err != nil {
 				return fmt.Errorf("io.Copy: %w", err)
 			}
-			outFile.Close()
+			_ = outFile.Close()
 		default:
 			err = fmt.Errorf(
 				"ExtractTarGz: uknown type: %v in %s",
