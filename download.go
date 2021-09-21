@@ -24,7 +24,7 @@ func Download(filePath, licenseKey string) error {
 	defer resp.Body.Close()
 	uncompressedStream, err := gzip.NewReader(resp.Body)
 	if err != nil {
-		return err
+		return fmt.Errorf("gzip.NewReader: %w", err)
 	}
 	tarReader := tar.NewReader(uncompressedStream)
 	for {
@@ -33,7 +33,7 @@ func Download(filePath, licenseKey string) error {
 			break
 		}
 		if err != nil {
-			return err
+			return fmt.Errorf("tarReader.Next: %w", err)
 		}
 		switch header.Typeflag {
 		case tar.TypeDir:
@@ -44,10 +44,10 @@ func Download(filePath, licenseKey string) error {
 			}
 			outFile, err := os.Create(filePath)
 			if err != nil {
-				return err
+				return fmt.Errorf("os.Create: %w", err)
 			}
 			if _, err := io.Copy(outFile, tarReader); err != nil {
-				return err
+				return fmt.Errorf("io.Copy: %w", err)
 			}
 			outFile.Close()
 		default:
@@ -55,7 +55,7 @@ func Download(filePath, licenseKey string) error {
 				"ExtractTarGz: uknown type: %v in %s",
 				header.Typeflag,
 				header.Name)
-			return err
+			return fmt.Errorf("header.Typeflag: %w", err)
 		}
 	}
 	return nil
